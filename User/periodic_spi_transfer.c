@@ -23,7 +23,21 @@
 uint16_t TxData1[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
 uint16_t TxData2[SPI_BUF_SIZE] = {0};
 int16_t RxData[SPI_BUF_SIZE][2] = {};
+//int16_t RxData[SPI_BUF_SIZE] = {};
+//uint16_t TxData1;
+//int16_t RxData;
 
+uint16_t TxData3[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
+uint16_t TxData4[SPI_BUF_SIZE] = {SMALL_RANGE_128SP_WF};
+uint8_t RxData2[SPI_BUF_SIZE][3] = {};
+uint8_t RxData3[SPI_BUF_SIZE][3] = {};
+
+
+#define TIMER_PERIOD 285 
+//285 at 144MHz
+//275 at 120MHz
+//This number needs to be large enough to finish all transactions,
+// but also smaller than the full period.
 /*********************************************************************
  * @fn      DMA1_Tx_Init
  *
@@ -40,7 +54,7 @@ void DMA_Tx_Init( DMA_Channel_TypeDef* DMA_CHx, uint32_t ppadr, uint32_t memadr,
 {
     DMA_InitTypeDef DMA_InitStructure={0};
 
-    RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1, ENABLE );
+    RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1 | RCC_AHBPeriph_DMA2, ENABLE );
 
     DMA_DeInit(DMA_CHx);
 
@@ -76,7 +90,7 @@ void DMA_Rx_Init( DMA_Channel_TypeDef* DMA_CHx, uint32_t ppadr, uint32_t memadr,
 {
 	DMA_InitTypeDef DMA_InitStructure={0};
 
-	RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1, ENABLE );
+	RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1 | RCC_AHBPeriph_DMA2, ENABLE );
 
 	DMA_DeInit(DMA_CHx);
 
@@ -110,8 +124,7 @@ void Setup_Periodic_Update_TIM2(void){
 
     // Update itself takes 2.33us at 120MHz.
     // The actual update peri
-    uint16_t arr = 285; //285 at 144MHz
-    //uint16_t arr = 275; //275 at 120MHz
+    uint16_t arr = TIMER_PERIOD;
 
     GPIO_InitTypeDef GPIO_InitStructure={0};
     TIM_OCInitTypeDef TIM_OCInitStructure={0};
@@ -140,7 +153,7 @@ void Setup_Periodic_Update_TIM2(void){
     // TIM2 CH1 setup 
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
     //TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_Pulse = 2;
+    TIM_OCInitStructure.TIM_Pulse = 1;
     TIM_OC1Init( TIM2, &TIM_OCInitStructure );
     
     // TIM2 CH2 setup 
@@ -154,16 +167,16 @@ void Setup_Periodic_Update_TIM2(void){
     // -- Used as the CS signal on the DAc and CONV signal on ADS8883/8863 ADC
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-    TIM_OCInitStructure.TIM_Pulse = 150;
+    TIM_OCInitStructure.TIM_Pulse = 142;
     TIM_OC3Init( TIM2, &TIM_OCInitStructure );
 
     // TIM2 CH4 setup 
     // -- Used as the LDAC signal.
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_Pulse = 155;
+    TIM_OCInitStructure.TIM_Pulse = 145;
     TIM_OC4Init( TIM2, &TIM_OCInitStructure );
-
+    TIM_ForcedOC4Config( TIM2, TIM_ForcedAction_Active);
 
     // Set up TIM2 to be triggered by the output trigger (TRGO) from TIM4.
     // See the TIM4 setting to find out what TRGO actually is wired to.
@@ -178,64 +191,136 @@ void Setup_Periodic_Update_TIM2(void){
 }
 
 /*********************************************************************
- * @fn      Setup_Periodic_Update_TIM3
+ * @fn      Setup_Periodic_Update_TIM5
  *
- * @brief   Setup TIM3 to schedule all DMA transfer to SPI2. No trigger
+ * @brief   Setup TIM5 to schedule all DMA transfer to SPI2. No trigger
  *          signal is generated here, as they are shared with TIM2.
  *
  * @param   
  *
  * @return  none
  */
-void Setup_Periodic_Update_TIM3(void){
+void Setup_Periodic_Update_TIM5(void){
 
     // Update itself takes 2.33us at 120MHz.
     // The actual update peri
-    uint16_t arr = 280;
+    uint16_t  arr = TIMER_PERIOD;
 
     TIM_OCInitTypeDef TIM_OCInitStructure={0};
     //TIM_ICInitTypeDef TIM_ICInitStructure={0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure={0};
 
-    RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM3, ENABLE );
+    RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM5, ENABLE );
 
-    // Note that as TIM2 and TIM3 are synchronized, TIM3 
+    // Note that as TIM2 and TIM5 are synchronized, TIM5 
     // do not need to generate its own CS/LDAC signal.
     // Hence there is no GPIO setting here.
 
-    // TIM3 period setup
+    // TIM5 period setup
     TIM_TimeBaseInitStructure.TIM_Period = arr;
     TIM_TimeBaseInitStructure.TIM_Prescaler = 0; // No prescalar
     TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit( TIM3, &TIM_TimeBaseInitStructure);
+    TIM_TimeBaseInit( TIM5, &TIM_TimeBaseInitStructure);
 
-    // Common setting for all channels of TIM3
+    // Common setting for all channels of TIM5. Note output is diabled.
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
 
-    // TIM3 CH1 setup 
+    // TIM5 CH1 setup 
     
     TIM_OCInitStructure.TIM_Pulse = 3;
-    TIM_OC1Init( TIM3, &TIM_OCInitStructure );
+    TIM_OC1Init( TIM5, &TIM_OCInitStructure );
     
-    // TIM3 CH4 setup 
-    TIM_OCInitStructure.TIM_Pulse = 62;
-    TIM_OC4Init( TIM3, &TIM_OCInitStructure );
+    // TIM5 CH1 setup 
+    
+    TIM_OCInitStructure.TIM_Pulse = 27;
+    TIM_OC2Init( TIM5, &TIM_OCInitStructure );
+
+    // TIM5 CH1 setup 
+    
+    TIM_OCInitStructure.TIM_Pulse = 51;
+    TIM_OC3Init( TIM5, &TIM_OCInitStructure );
     
 
-    // Set up TIM3 to be triggered by the output trigger (TRGO) from TIM4.
+    // Set up TIM5 to be triggered by the output trigger (TRGO) from TIM4.
     // See the TIM4 setting to find out what TRGO actually is wired to.
-    TIM_SelectInputTrigger(TIM3, TIM_TS_ITR3);
-    TIM_SelectSlaveMode(TIM3, TIM_SlaveMode_Trigger);
-    TIM_SelectOnePulseMode( TIM3,TIM_OPMode_Single );
+    TIM_SelectInputTrigger(TIM5, TIM_TS_ITR2);
+    TIM_SelectSlaveMode(TIM5, TIM_SlaveMode_Trigger);
+    TIM_SelectOnePulseMode( TIM5,TIM_OPMode_Single );
 
     // enable DMA 
-    TIM_DMACmd( TIM3, TIM_DMA_CC1, ENABLE);
-    TIM_DMACmd( TIM3, TIM_DMA_CC4, ENABLE);
+    TIM_DMACmd( TIM5, TIM_DMA_CC1, ENABLE);
+    TIM_DMACmd( TIM5, TIM_DMA_CC2, ENABLE);
+    TIM_DMACmd( TIM5, TIM_DMA_CC3, ENABLE);
 }
 
+/*********************************************************************
+ * @fn      Setup_Periodic_Update_TIM10
+ *
+ * @brief   Setup TIM10 to schedule all DMA transfer to SPI2. No trigger
+ *          signal is generated here, as they are shared with TIM2.
+ *
+ * @param   
+ *
+ * @return  none
+ */
+void Setup_Periodic_Update_TIM10(void){
+
+    // Update itself takes 2.33us at 120MHz.
+    // The actual update peri
+    uint16_t  arr = TIMER_PERIOD;
+
+    TIM_OCInitTypeDef TIM_OCInitStructure={0};
+    //TIM_ICInitTypeDef TIM_ICInitStructure={0};
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure={0};
+
+    RCC_APB2PeriphClockCmd( RCC_APB2Periph_TIM10, ENABLE );
+
+    // Note that as TIM2 and TIM10 are synchronized, TIM10 
+    // do not need to generate its own CS/LDAC signal.
+    // Hence there is no GPIO setting here.
+
+    // TIM10 period setup
+    TIM_TimeBaseInitStructure.TIM_Period = arr;
+    TIM_TimeBaseInitStructure.TIM_Prescaler = 0; // No prescalar
+    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit( TIM10, &TIM_TimeBaseInitStructure);
+
+    // Common setting for all channels of TIM10. Note output is diabled.
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+
+    // TIM10 CH1 setup 
+    
+    TIM_OCInitStructure.TIM_Pulse = 5;
+    TIM_OC1Init( TIM10, &TIM_OCInitStructure );
+    
+    // TIM10 CH2 setup 
+    
+    TIM_OCInitStructure.TIM_Pulse = 29;
+    TIM_OC2Init( TIM10, &TIM_OCInitStructure );
+
+    // TIM10 CH3 setup 
+    
+    TIM_OCInitStructure.TIM_Pulse = 53;
+    TIM_OC3Init( TIM10, &TIM_OCInitStructure );
+    
+
+    // Set up TIM10 to be triggered by the output trigger (TRGO) from TIM4.
+    // See the TIM4 setting to find out what TRGO actually is wired to.
+    TIM_SelectInputTrigger(TIM10, TIM_TS_ITR2);
+    TIM_SelectSlaveMode(TIM10, TIM_SlaveMode_Trigger);
+    TIM_SelectOnePulseMode( TIM10,TIM_OPMode_Single );
+
+    // enable DMA 
+    TIM_DMACmd( TIM10, TIM_DMA_CC1, ENABLE);
+    TIM_DMACmd( TIM10, TIM_DMA_CC2, ENABLE);
+    TIM_DMACmd( TIM10, TIM_DMA_CC3, ENABLE);
+}
 /*********************************************************************
  * @fn      Setup_Periodic_Update_SPI1
  *
@@ -308,6 +393,135 @@ void Setup_Periodic_Update_SPI1(void)
 	SPI_Cmd( SPI1, ENABLE );
 }
 
+
+/*********************************************************************
+ * @fn      Setup_Periodic_Update_SPI2
+ *
+ * @brief   Configuring SPI2 for full-duplex communication, which will 
+ *          be used for talking to DAC/ADC.
+ *
+ * @return  none
+ */
+void Setup_Periodic_Update_SPI2(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure={0};
+	SPI_InitTypeDef SPI_InitStructure={0};
+
+	RCC_APB1PeriphClockCmd( RCC_APB1Periph_SPI2, ENABLE );
+    RCC_APB2PeriphClockCmd( RCC_APB2Periph_GPIOB, ENABLE );
+    //Not using the hard-ware CS pin.
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_15;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init( GPIOB, &GPIO_InitStructure );
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_Init( GPIOB, &GPIO_InitStructure );
+
+
+	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+    SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+    //Original Config. The DAC indeed triggers on the rising edge.
+    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+
+    // The ADC SPI interface takes the data on the falling edge.
+    // It seems that the following configuration is better when using at
+    // 36MHz, slightly above the ADS8863 rating at 32MHz
+    SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+
+    SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+    //SPI_InitStructure.SPI_NSS = SPI_NSS_Hard;
+    //SPI_SSOutputCmd(SPI2, ENABLE);
+    
+
+    // Prescalar = 4, at 120MHz this is 30MHz
+    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+    SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+    SPI_InitStructure.SPI_CRCPolynomial = 7;
+    SPI_Init( SPI2, &SPI_InitStructure );
+
+    SPI_SSOutputCmd(SPI2, DISABLE );
+
+    // Do not enable TX DMA, as TIM2 are used to time TX transfers.
+    // However, RX DMA can still be used as usual.
+	//SPI_I2S_DMACmd( SPI2, SPI_I2S_DMAReq_Tx, ENABLE );
+	SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Rx, ENABLE);
+
+    // Enable RX Interrupt as well. Depending on the odd-even 
+    // SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_RXNE, ENABLE);
+
+	SPI_Cmd( SPI2, ENABLE );
+}
+
+
+/*********************************************************************
+ * @fn      Setup_Periodic_Update_SPI3
+ *
+ * @brief   Configuring SPI3 for full-duplex communication, which will 
+ *          be used for talking to DAC/ADC.
+ *
+ * @return  none
+ */
+void Setup_Periodic_Update_SPI3(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure={0};
+	SPI_InitTypeDef SPI_InitStructure={0};
+
+	RCC_APB1PeriphClockCmd( RCC_APB1Periph_SPI3 , ENABLE );
+    RCC_APB2PeriphClockCmd( RCC_APB2Periph_GPIOB , ENABLE);
+    //Not using the hard-ware CS pin.
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init( GPIOB, &GPIO_InitStructure );
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_Init( GPIOB, &GPIO_InitStructure );
+
+
+	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+    SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+    //Original Config. The DAC indeed triggers on the rising edge.
+    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+
+    // The ADC SPI interface takes the data on the falling edge.
+    // It seems that the following configuration is better when using at
+    // 36MHz, slightly above the ADS8863 rating at 32MHz
+    SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+
+    SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+    //SPI_InitStructure.SPI_NSS = SPI_NSS_Hard;
+    //SPI_SSOutputCmd(SPI3, ENABLE);
+    
+
+    // Prescalar = 4, at 120MHz this is 30MHz
+    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+    SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+    SPI_InitStructure.SPI_CRCPolynomial = 7;
+    SPI_Init( SPI3, &SPI_InitStructure );
+
+    SPI_SSOutputCmd(SPI3, DISABLE );
+
+    // Do not enable TX DMA, as TIM2 are used to time TX transfers.
+    // However, RX DMA can still be used as usual.
+	//SPI_I2S_DMACmd( SPI3, SPI_I2S_DMAReq_Tx, ENABLE );
+	SPI_I2S_DMACmd(SPI3, SPI_I2S_DMAReq_Rx, ENABLE);
+
+    // Enable RX Interrupt as well. Depending on the odd-even 
+    // SPI_I2S_ITConfig(SPI3, SPI_I2S_IT_RXNE, ENABLE);
+
+	SPI_Cmd( SPI3, ENABLE );
+}
 /*********************************************************************
  * @fn      Setup_Periodic_Trigger
  *
@@ -347,7 +561,7 @@ void Setup_Periodic_Trigger(uint16_t period)
 
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = 12; //1us trigger
+    TIM_OCInitStructure.TIM_Pulse = 11; //1us trigger
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     TIM_OC3Init( TIM4, &TIM_OCInitStructure );
 
@@ -381,10 +595,15 @@ void Setup_Periodic_Update(uint16_t period)
     //Setup basic functions of TIM2 and SPI1
     Setup_Periodic_Update_TIM2();
     Setup_Periodic_Update_SPI1();
-
+    Setup_Periodic_Update_TIM5();
+    Setup_Periodic_Update_SPI2();
+    Setup_Periodic_Update_TIM10();
+    Setup_Periodic_Update_SPI3();
     //Setup the DMA channels properly.
+
+    //Relavent DMA for SPI1 transfers:
     //DMA request by SPI1_RX
-    DMA_Rx_Init( DMA1_Channel2, (uint32_t)&SPI1->DATAR, (uint32_t)RxData, SPI_BUF_SIZE*2 );
+    DMA_Rx_Init( DMA1_Channel2, (uint32_t)&SPI1->DATAR, (uint32_t)RxData, SPI_BUF_SIZE );
     DMA_Cmd( DMA1_Channel2, ENABLE );
 	//DMA request by TIM2_CH1 compare
 	DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
@@ -392,7 +611,36 @@ void Setup_Periodic_Update(uint16_t period)
 	//DMA request by TIM2_CH2 compare
 	DMA_Tx_Init( DMA1_Channel7, (uint32_t)&SPI1->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
 	DMA_Cmd( DMA1_Channel7, ENABLE );
-    
+
+    //Relavent DMA for SPI2 transfers:
+    //DMA request by SPI2_RX
+    DMA_Rx_Init( DMA1_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)RxData2, SPI_BUF_SIZE*3 );
+    DMA_Cmd( DMA1_Channel4, ENABLE );
+    //DMA request by TIM5_CH1 compare
+	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel5, ENABLE );
+	//DMA request by TIM5_CH2 compare
+	DMA_Tx_Init( DMA2_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel4, ENABLE );
+    //DMA request by TIM5_CH3 compare
+	DMA_Tx_Init( DMA2_Channel2, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel2, ENABLE );
+
+
+    //Relavent DMA for SPI3 transfers:
+    //DMA request by SPI3_RX
+    DMA_Rx_Init( DMA2_Channel1, (uint32_t)&SPI3->DATAR, (uint32_t)RxData3, SPI_BUF_SIZE*3 );
+    DMA_Cmd( DMA1_Channel4, ENABLE );
+    //DMA request by TIM10_CH1 compare
+	DMA_Tx_Init( DMA2_Channel8, (uint32_t)&SPI3->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel8, ENABLE );
+	//DMA request by TIM10_CH2 compare
+	DMA_Tx_Init( DMA2_Channel9, (uint32_t)&SPI3->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel9, ENABLE );
+    //DMA request by TIM10_CH3 compare
+	DMA_Tx_Init( DMA2_Channel10, (uint32_t)&SPI3->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
+	DMA_Cmd( DMA2_Channel10, ENABLE );
+
     //Enable  interrupt 
     //NVIC_InitTypeDef NVIC_InitStructure = {0};
     //NVIC_InitStructure.NVIC_IRQChannel = TIM4_IRQn;

@@ -9,6 +9,7 @@
 #include "periodic_spi_transfer.h"
 
 
+uint8_t PID_mode = 1;
 
 size_t spi_tx_buf_index = 1;
 size_t spi_rx_buf_index = 0;
@@ -56,6 +57,7 @@ __attribute__((always_inline)) inline void Set_Next_Output (int32_t output )
 {
     //int32_t shifted_output = output + 0x80000;
     // For MAX5717/5719
+    //For MAX5717
     TxData1[spi_tx_buf_index] = output;
     TxData2[spi_tx_buf_index] = output;
 
@@ -67,6 +69,71 @@ __attribute__((always_inline)) inline void Set_Next_Output (int32_t output )
 
 
 PID_Core pid_a;
+
+// Two-DAC architecture for piezo scanning:
+// Slow path: this DAC is connected to amplifying buffer for high 
+// voltage bias (30V) and  contains low-pass filter to reduce noise.  
+//  This path can also be used to implement the double integrator.
+// Fast path: this DAC is connected to the buffer with small gain. 
+// The range is small (5V) but there is no low-pass filter.
+
+// Struct containing piezo scan info. 
+// For piezo scan, the LV side is fixed, while the HV side is varied
+// to find the lock point automatically.
+typedef struct {
+    
+    // Remembers the condition of last lock point.
+    uint32_t piezo_HV_memory,piezo_LV_memory;
+    // The cuurent HV piezo voltage
+    uint32_t piezo_HV_current;
+    // The increment for piezo scan.
+    uint32_t piezo_HV_inc;
+} Scanning_Core;
+
+
+// Here we keep a record of a few points with the most 
+// positive and the most negative error signal. 
+// Then we will average them, find the intersect with 0
+// which should be our best guess for the lock point.
+/*#define MINMAX_RECORD_N 3
+int32_t max_err_val [MINMAX_RECORD_N];
+unt32_t max_err_pzv [MINMAX_RECORD_N];
+int32_t min_err_val [MINMAX_RECORD_N];
+unt32_t min_err_pzv [MINMAX_RECORD_N];
+
+
+
+void Execute_Scan_Callback(void){
+    // get the error value
+    int32_t err_val = Get_Last_Input();
+    //bool max_updated = false, min_updated = false;
+    for (size_t i = 0;i<MINMAX_RECORD_N;i++){
+        if (err_val>max_err_val[i]){
+            max_err_val[i]=err_val;
+            max_err_pzv[i]=piezo_HV_current;
+            break;
+        }
+    }
+    for (size_t i = 0;i<MINMAX_RECORD_N;i++){
+        if (err_val<min_err_val[i]){
+            min_err_val[i]=err_val;
+            min_err_pzv[i]=piezo_HV_current;
+            break;
+        }
+    }
+
+    if (piezo_HV_current > PIEZO_HV_MAX){
+        piezo_HV_inc = - piezo_HV_inc;
+    }
+    if (piezo_HV_current < PIEZO_HV_MIX){
+        piezo_HV_inc = - piezo_HV_inc;
+    }
+    piezo_HV_current += piezo_HV_inc;
+    Set_Next_Output(piezo_HV_current);
+}
+*/
+
+
 //volatile int32_t output_DAC;
 void Initialize_PID_Core(void)
 {
@@ -230,6 +297,11 @@ void TIM4_IRQHandler(void) {
     //TIM_ClearITPendingBit(TIM4, TIM_IT_CC3);
     // Avoid function call, clear interrupt flag directly.
     TIM4->INTFR = (uint16_t)~TIM_IT_CC3; 
-    PID_Update_Callback();
+    if (PID_mode) {
+        PID_Update_Callback();
+    } else {
+
+    }
+    
     Update_Index_After_SPI_Transfer();
 }
