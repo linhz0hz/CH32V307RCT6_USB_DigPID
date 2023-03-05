@@ -23,13 +23,13 @@
 uint16_t TxData1[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
 uint16_t TxData2[SPI_BUF_SIZE] = {0};
 int16_t RxData[SPI_BUF_SIZE][2] = {};
-//int16_t RxData[SPI_BUF_SIZE] = {};
+int16_t RxData1[SPI_BUF_SIZE] = {};
 //uint16_t TxData1;
 //int16_t RxData;
 
 uint16_t TxData3[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
-uint16_t TxData4[SPI_BUF_SIZE] = {SMALL_RANGE_128SP_WF};
-uint8_t RxData2[SPI_BUF_SIZE][3] = {};
+uint16_t TxData4[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
+int16_t RxData2[SPI_BUF_SIZE] = {};
 uint8_t RxData3[SPI_BUF_SIZE][3] = {};
 
 
@@ -186,7 +186,7 @@ void Setup_Periodic_Update_TIM2(void){
 
     // enable DMA 
     TIM_DMACmd( TIM2, TIM_DMA_CC1, ENABLE);
-    TIM_DMACmd( TIM2, TIM_DMA_CC2, ENABLE);
+    //TIM_DMACmd( TIM2, TIM_DMA_CC2, ENABLE);
 
 }
 
@@ -252,8 +252,8 @@ void Setup_Periodic_Update_TIM5(void){
 
     // enable DMA 
     TIM_DMACmd( TIM5, TIM_DMA_CC1, ENABLE);
-    TIM_DMACmd( TIM5, TIM_DMA_CC2, ENABLE);
-    TIM_DMACmd( TIM5, TIM_DMA_CC3, ENABLE);
+    //TIM_DMACmd( TIM5, TIM_DMA_CC2, ENABLE);
+    //TIM_DMACmd( TIM5, TIM_DMA_CC3, ENABLE);
 }
 
 /*********************************************************************
@@ -361,14 +361,14 @@ void Setup_Periodic_Update_SPI1(void)
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
     SPI_InitStructure.SPI_DataSize = SPI_DataSize_16b;
     //Original Config. The DAC indeed triggers on the rising edge.
-    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+    SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 
     // The ADC SPI interface takes the data on the falling edge.
     // It seems that the following configuration is better when using at
     // 36MHz, slightly above the ADS8863 rating at 32MHz
-    SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 
 
     SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
@@ -423,16 +423,18 @@ void Setup_Periodic_Update_SPI2(void)
 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-    SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+    //SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+    SPI_InitStructure.SPI_DataSize = SPI_DataSize_16b;
+    
     //Original Config. The DAC indeed triggers on the rising edge.
-    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+    SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 
     // The ADC SPI interface takes the data on the falling edge.
     // It seems that the following configuration is better when using at
     // 36MHz, slightly above the ADS8863 rating at 32MHz
-    SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+    //SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+    //SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 
     SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
     //SPI_InitStructure.SPI_NSS = SPI_NSS_Hard;
@@ -597,36 +599,37 @@ void Setup_Periodic_Update(uint16_t period)
     Setup_Periodic_Update_SPI1();
     Setup_Periodic_Update_TIM5();
     Setup_Periodic_Update_SPI2();
-    Setup_Periodic_Update_TIM10();
-    Setup_Periodic_Update_SPI3();
+    //Setup_Periodic_Update_TIM10();
+    //Setup_Periodic_Update_SPI3();
     //Setup the DMA channels properly.
 
     //Relavent DMA for SPI1 transfers:
     //DMA request by SPI1_RX
-    DMA_Rx_Init( DMA1_Channel2, (uint32_t)&SPI1->DATAR, (uint32_t)RxData, SPI_BUF_SIZE );
+    DMA_Rx_Init( DMA1_Channel2, (uint32_t)&SPI1->DATAR, (uint32_t)RxData1, SPI_BUF_SIZE );
     DMA_Cmd( DMA1_Channel2, ENABLE );
 	//DMA request by TIM2_CH1 compare
-	DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
+	//DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
+    DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
 	DMA_Cmd( DMA1_Channel5, ENABLE );
 	//DMA request by TIM2_CH2 compare
-	DMA_Tx_Init( DMA1_Channel7, (uint32_t)&SPI1->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
-	DMA_Cmd( DMA1_Channel7, ENABLE );
+	//DMA_Tx_Init( DMA1_Channel7, (uint32_t)&SPI1->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
+	//DMA_Cmd( DMA1_Channel7, ENABLE );
 
     //Relavent DMA for SPI2 transfers:
     //DMA request by SPI2_RX
-    DMA_Rx_Init( DMA1_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)RxData2, SPI_BUF_SIZE*3 );
+    DMA_Rx_Init( DMA1_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)RxData2, SPI_BUF_SIZE );
     DMA_Cmd( DMA1_Channel4, ENABLE );
     //DMA request by TIM5_CH1 compare
-	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
 	DMA_Cmd( DMA2_Channel5, ENABLE );
-	//DMA request by TIM5_CH2 compare
-	DMA_Tx_Init( DMA2_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
-	DMA_Cmd( DMA2_Channel4, ENABLE );
-    //DMA request by TIM5_CH3 compare
-	DMA_Tx_Init( DMA2_Channel2, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
-	DMA_Cmd( DMA2_Channel2, ENABLE );
+	////DMA request by TIM5_CH2 compare
+	//DMA_Tx_Init( DMA2_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	//DMA_Cmd( DMA2_Channel4, ENABLE );
+    ////DMA request by TIM5_CH3 compare
+	//DMA_Tx_Init( DMA2_Channel2, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+	//DMA_Cmd( DMA2_Channel2, ENABLE );
 
-
+    /*
     //Relavent DMA for SPI3 transfers:
     //DMA request by SPI3_RX
     DMA_Rx_Init( DMA2_Channel1, (uint32_t)&SPI3->DATAR, (uint32_t)RxData3, SPI_BUF_SIZE*3 );
@@ -640,7 +643,7 @@ void Setup_Periodic_Update(uint16_t period)
     //DMA request by TIM10_CH3 compare
 	DMA_Tx_Init( DMA2_Channel10, (uint32_t)&SPI3->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
 	DMA_Cmd( DMA2_Channel10, ENABLE );
-
+    */
     //Enable  interrupt 
     //NVIC_InitTypeDef NVIC_InitStructure = {0};
     //NVIC_InitStructure.NVIC_IRQChannel = TIM4_IRQn;
