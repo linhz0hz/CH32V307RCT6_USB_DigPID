@@ -9,6 +9,16 @@
 #define USER_PID_CONTROLLER_CORE_H_
 #include <stdint.h>
 
+enum Operation_Mode_Enum
+{
+    OP_MODE_IDLE = 0,     // Do nothing, output constant level.
+    OP_MODE_SWEEP = 1,    // Ramp the voltage up and down but not actually locking.
+    OP_MODE_SEEK = 2,     // Ramp the voltage until a lockable signal is found, then automatically engage the lock.
+    OP_MODE_LOCK = 3,     // PID lock engaged.
+};
+
+
+
 typedef struct {
     //Important constant for calculation:
     //-- Kp: proportional gain
@@ -34,5 +44,10 @@ void Initialize_PID_Core(void);
 void PID_Update_Callback(void);
 void Setup_PID_Computation_Indicator(void);
 //void PID_Update_Callback_Benchmark (void);
+
+void Update_Index_After_SPI_Transfer (void);
+int32_t Get_Last_Input (void);
+void Set_Next_Output (uint16_t output1, uint16_t output2);
+void Start_Sweep(void);
 
 #endif /* USER_PID_CONTROLLER_CORE_H_ */

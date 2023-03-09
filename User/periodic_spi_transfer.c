@@ -20,17 +20,17 @@
 //#define SPI_BUF_SIZE 128
 
 /* Global Variable */
-uint16_t TxData1[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
-uint16_t TxData2[SPI_BUF_SIZE] = {0};
-int16_t RxData[SPI_BUF_SIZE][2] = {};
-int16_t RxData1[SPI_BUF_SIZE] = {};
+uint16_t TxData1[SPI_BUF_SIZE];
+uint16_t TxData2[SPI_BUF_SIZE];
+//int16_t RxData[SPI_BUF_SIZE][2] = {};
 //uint16_t TxData1;
 //int16_t RxData;
 
-uint16_t TxData3[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
-uint16_t TxData4[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
-int16_t RxData2[SPI_BUF_SIZE] = {};
-uint8_t RxData3[SPI_BUF_SIZE][3] = {};
+//uint16_t TxData3[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
+//uint16_t TxData4[SPI_BUF_SIZE] = {FULL_RANGE_128SP_WF};
+int16_t RxData1[SPI_BUF_SIZE] = {0};
+int16_t RxData2[SPI_BUF_SIZE] = {0};
+//uint8_t RxData3[SPI_BUF_SIZE][3] = {};
 
 
 #define TIMER_PERIOD 285 
@@ -38,6 +38,27 @@ uint8_t RxData3[SPI_BUF_SIZE][3] = {};
 //275 at 120MHz
 //This number needs to be large enough to finish all transactions,
 // but also smaller than the full period.
+
+/*********************************************************************
+ * @fn      Data_Buf_Clear
+ *
+ * @brief   Initialize all data buffer to appropriate values.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void Data_Buf_Clear( void )
+{
+    for (size_t i = 0; i < SPI_BUF_SIZE; i++)
+    {
+        TxData1[i] = 0x7fff; // Midscale for unsigned int
+        TxData2[i] = 0x7fff; // Midscale for unsigned int
+        RxData1[i] = 0;
+        RxData2[i] = 0;
+    }
+}
+
 /*********************************************************************
  * @fn      DMA1_Tx_Init
  *
@@ -128,7 +149,6 @@ void Setup_Periodic_Update_TIM2(void){
 
     GPIO_InitTypeDef GPIO_InitStructure={0};
     TIM_OCInitTypeDef TIM_OCInitStructure={0};
-    //TIM_ICInitTypeDef TIM_ICInitStructure={0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure={0};
 
     RCC_APB2PeriphClockCmd( RCC_APB2Periph_GPIOA, ENABLE );
@@ -207,7 +227,6 @@ void Setup_Periodic_Update_TIM5(void){
     uint16_t  arr = TIMER_PERIOD;
 
     TIM_OCInitTypeDef TIM_OCInitStructure={0};
-    //TIM_ICInitTypeDef TIM_ICInitStructure={0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure={0};
 
     RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM5, ENABLE );
@@ -273,7 +292,6 @@ void Setup_Periodic_Update_TIM10(void){
     uint16_t  arr = TIMER_PERIOD;
 
     TIM_OCInitTypeDef TIM_OCInitStructure={0};
-    //TIM_ICInitTypeDef TIM_ICInitStructure={0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure={0};
 
     RCC_APB2PeriphClockCmd( RCC_APB2Periph_TIM10, ENABLE );
@@ -594,6 +612,7 @@ void Setup_Periodic_Trigger(uint16_t period)
  */
 void Setup_Periodic_Update(uint16_t period)
 {
+    Data_Buf_Clear();
     //Setup basic functions of TIM2 and SPI1
     Setup_Periodic_Update_TIM2();
     Setup_Periodic_Update_SPI1();
@@ -609,7 +628,7 @@ void Setup_Periodic_Update(uint16_t period)
     DMA_Cmd( DMA1_Channel2, ENABLE );
 	//DMA request by TIM2_CH1 compare
 	//DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
-    DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
+    DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
 	DMA_Cmd( DMA1_Channel5, ENABLE );
 	//DMA request by TIM2_CH2 compare
 	//DMA_Tx_Init( DMA1_Channel7, (uint32_t)&SPI1->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
@@ -620,7 +639,7 @@ void Setup_Periodic_Update(uint16_t period)
     DMA_Rx_Init( DMA1_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)RxData2, SPI_BUF_SIZE );
     DMA_Cmd( DMA1_Channel4, ENABLE );
     //DMA request by TIM5_CH1 compare
-	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData4, SPI_BUF_SIZE );
+	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
 	DMA_Cmd( DMA2_Channel5, ENABLE );
 	////DMA request by TIM5_CH2 compare
 	//DMA_Tx_Init( DMA2_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );

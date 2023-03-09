@@ -16,13 +16,14 @@
 /* Global Variable */
 extern uint16_t TxData1[SPI_BUF_SIZE];
 extern uint16_t TxData2[SPI_BUF_SIZE];
-extern int16_t RxData[SPI_BUF_SIZE][2];
+extern int16_t RxData1[SPI_BUF_SIZE];
+extern int16_t RxData2[SPI_BUF_SIZE];
+
+//extern int16_t RxData[SPI_BUF_SIZE][2];
 //extern int16_t RxData[SPI_BUF_SIZE];
 //extern uint16_t TxData1;
 //extern int16_t RxData;
 
 void Setup_Periodic_Update(uint16_t period);
-void Update_Index_After_SPI_Transfer (void);
-int32_t Get_Last_Input (void);
-void Set_Next_Output (int32_t output );
+
 #endif /* USER_PERIODIC_SPI_TRANSFER_H_ */

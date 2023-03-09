@@ -9,10 +9,12 @@
 #include "periodic_spi_transfer.h"
 
 
-uint8_t PID_mode = 1;
 
 size_t spi_tx_buf_index = 1;
 size_t spi_rx_buf_index = 0;
+
+
+enum Operation_Mode_Enum operation_mode = OP_MODE_IDLE;
 
 /*********************************************************************
  * @fn      Update_Index_After_SPI_Transfer
@@ -41,7 +43,7 @@ __attribute__((always_inline)) inline void Update_Index_After_SPI_Transfer (void
 __attribute__((always_inline)) inline int32_t Get_Last_Input (void)
 {
     // The ADS8883/8863 sensor is at most 20bits, the last 12 bits are dropped.
-    return RxData[spi_rx_buf_index][0];
+    return RxData1[spi_rx_buf_index];
 }
 
 /*********************************************************************
@@ -53,13 +55,13 @@ __attribute__((always_inline)) inline int32_t Get_Last_Input (void)
  *          Assume 20 bits are effective
  */
 
-__attribute__((always_inline)) inline void Set_Next_Output (int32_t output )
+__attribute__((always_inline)) inline void Set_Next_Output (uint16_t output1, uint16_t output2)
 {
     //int32_t shifted_output = output + 0x80000;
     // For MAX5717/5719
     //For MAX5717
-    TxData1[spi_tx_buf_index] = output;
-    TxData2[spi_tx_buf_index] = output;
+    TxData1[spi_tx_buf_index] = output1;
+    TxData2[spi_tx_buf_index] = output2;
 
     // For AD5542 / MS5542
     //TxData1[spi_tx_buf_index] = shifted_output >> 16;
@@ -70,25 +72,7 @@ __attribute__((always_inline)) inline void Set_Next_Output (int32_t output )
 
 PID_Core pid_a;
 
-// Two-DAC architecture for piezo scanning:
-// Slow path: this DAC is connected to amplifying buffer for high 
-// voltage bias (30V) and  contains low-pass filter to reduce noise.  
-//  This path can also be used to implement the double integrator.
-// Fast path: this DAC is connected to the buffer with small gain. 
-// The range is small (5V) but there is no low-pass filter.
 
-// Struct containing piezo scan info. 
-// For piezo scan, the LV side is fixed, while the HV side is varied
-// to find the lock point automatically.
-typedef struct {
-    
-    // Remembers the condition of last lock point.
-    uint32_t piezo_HV_memory,piezo_LV_memory;
-    // The cuurent HV piezo voltage
-    uint32_t piezo_HV_current;
-    // The increment for piezo scan.
-    uint32_t piezo_HV_inc;
-} Scanning_Core;
 
 
 // Here we keep a record of a few points with the most 
@@ -253,7 +237,7 @@ inline void PID_Update_Callback(void)
     if (out_int < pid_a.lim_out_l) {
         out_int = pid_a.lim_out_l;
     }
-    Set_Next_Output(out_int);
+    Set_Next_Output(out_int,out_int);
     //GPIO_WriteBit(GPIOA, GPIO_Pin_0 | GPIO_Pin_1 ,0);
     GPIOA->BCR  = 0x03; //Avoid function call
 }
@@ -269,6 +253,8 @@ inline void PID_Update_Callback(void)
 	}
     GPIO_WriteBit(GPIOA, GPIO_Pin_0 | GPIO_Pin_1 ,0);
 }*/
+
+
 void Setup_PID_Computation_Indicator(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure = {0};
@@ -282,7 +268,49 @@ void Setup_PID_Computation_Indicator(void)
 
 }
 
+// Two-DAC architecture for piezo scanning:
+// Slow path: this DAC is connected to amplifying buffer for high 
+// voltage bias (30V) and  contains low-pass filter to reduce noise.  
+//  This path can also be used to implement the double integrator.
+// Fast path: this DAC is connected to the buffer with small gain. 
+// The range is small (5V) but there is no low-pass filter.
 
+
+#define PIEZO_RAMP_MAX 0xFF80
+#define PIEZO_RAMP_MIN 0x0080
+
+
+// Struct containing piezo scan info. 
+// For piezo scan, the LV side is fixed, while the HV side is varied
+// to find the lock point automatically.
+typedef struct {
+    
+    // Remembers the condition of last lock point.
+    int32_t piezo_HV_memory,piezo_LV_memory;
+    // The cuurent HV piezo voltage
+    int32_t piezo_HV_current;
+    // The increment for piezo scan.
+    int32_t piezo_HV_inc;
+    int32_t piezo_HV_ramp_step;
+} Ramping_Core;
+
+Ramping_Core sweep_core;
+
+void Sweep_Callback(void){
+    sweep_core.piezo_HV_current += sweep_core.piezo_HV_ramp_step;
+
+    if ( ((sweep_core.piezo_HV_ramp_step > 0) && (sweep_core.piezo_HV_current > PIEZO_RAMP_MAX)) ||
+         ((sweep_core.piezo_HV_ramp_step < 0) && (sweep_core.piezo_HV_current < PIEZO_RAMP_MIN)) ) {
+        sweep_core.piezo_HV_ramp_step = -sweep_core.piezo_HV_ramp_step;
+    }
+    Set_Next_Output(sweep_core.piezo_HV_current,sweep_core.piezo_HV_current);
+}
+
+void Start_Sweep(void){
+    sweep_core.piezo_HV_ramp_step = 1;
+    sweep_core.piezo_HV_current = 0x7fff;
+    operation_mode = OP_MODE_SWEEP;
+}
 
 void TIM4_IRQHandler(void) {
 
@@ -296,11 +324,11 @@ void TIM4_IRQHandler(void) {
     //}
     //TIM_ClearITPendingBit(TIM4, TIM_IT_CC3);
     // Avoid function call, clear interrupt flag directly.
-    TIM4->INTFR = (uint16_t)~TIM_IT_CC3; 
-    if (PID_mode) {
+    TIM4->INTFR = (uint16_t)~TIM_IT_CC3;
+    if (operation_mode == OP_MODE_LOCK) {
         PID_Update_Callback();
-    } else {
-
+    } else if (operation_mode == OP_MODE_SWEEP){
+        Sweep_Callback();
     }
     
     Update_Index_After_SPI_Transfer();

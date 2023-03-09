@@ -69,7 +69,7 @@ int main(void)
 	Setup_PID_Computation_Indicator();
 	Initialize_PID_Core();
 	Setup_Periodic_Update(24);
-
+	Start_Sweep();
 	while(1) {
 	    //PID_Update_Callback_Benchmark();
 		//Delay_Ms(10);
