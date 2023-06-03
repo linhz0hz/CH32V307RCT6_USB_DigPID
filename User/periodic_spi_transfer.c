@@ -20,8 +20,8 @@
 //#define SPI_BUF_SIZE 128
 
 /* Global Variable */
-uint16_t TxData1[SPI_BUF_SIZE];
-uint16_t TxData2[SPI_BUF_SIZE];
+uint16_t TxData1[2];
+uint16_t TxData2[2];
 //int16_t RxData[SPI_BUF_SIZE][2] = {};
 //uint16_t TxData1;
 //int16_t RxData;
@@ -32,6 +32,9 @@ int16_t RxData1[SPI_BUF_SIZE] = {0};
 int16_t RxData2[SPI_BUF_SIZE] = {0};
 //uint8_t RxData3[SPI_BUF_SIZE][3] = {};
 
+size_t spi_rx_buf_head = 0;
+size_t spi_rx_buf_tail = 0;
+size_t spi_rx_buf_n = 0;
 
 #define TIMER_PERIOD 285 
 //285 at 144MHz
@@ -50,10 +53,13 @@ int16_t RxData2[SPI_BUF_SIZE] = {0};
  */
 void Data_Buf_Clear( void )
 {
+    TxData1[0] = 0x7fff; // Midscale for unsigned int
+    TxData2[0] = 0x7fff; // Midscale for unsigned int
+    TxData1[1] = 0x1234; // Midscale for unsigned int
+    TxData2[1] = 0x1234; // Midscale for unsigned int
     for (size_t i = 0; i < SPI_BUF_SIZE; i++)
     {
-        TxData1[i] = 0x7fff; // Midscale for unsigned int
-        TxData2[i] = 0x7fff; // Midscale for unsigned int
+        
         RxData1[i] = 0;
         RxData2[i] = 0;
     }
@@ -628,7 +634,7 @@ void Setup_Periodic_Update(uint16_t period)
     DMA_Cmd( DMA1_Channel2, ENABLE );
 	//DMA request by TIM2_CH1 compare
 	//DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
-    DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, SPI_BUF_SIZE );
+    DMA_Tx_Init( DMA1_Channel5, (uint32_t)&SPI1->DATAR, (uint32_t)TxData1, 2 );
 	DMA_Cmd( DMA1_Channel5, ENABLE );
 	//DMA request by TIM2_CH2 compare
 	//DMA_Tx_Init( DMA1_Channel7, (uint32_t)&SPI1->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
@@ -639,7 +645,7 @@ void Setup_Periodic_Update(uint16_t period)
     DMA_Rx_Init( DMA1_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)RxData2, SPI_BUF_SIZE );
     DMA_Cmd( DMA1_Channel4, ENABLE );
     //DMA request by TIM5_CH1 compare
-	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData2, SPI_BUF_SIZE );
+	DMA_Tx_Init( DMA2_Channel5, (uint32_t)&SPI2->DATAR, (uint32_t)TxData2, 2 );
 	DMA_Cmd( DMA2_Channel5, ENABLE );
 	////DMA request by TIM5_CH2 compare
 	//DMA_Tx_Init( DMA2_Channel4, (uint32_t)&SPI2->DATAR, (uint32_t)TxData3, SPI_BUF_SIZE );
@@ -677,6 +683,30 @@ void Setup_Periodic_Update(uint16_t period)
     Setup_Periodic_Trigger(period);
 }
 
+
+__attribute__((always_inline)) inline void Update_Index_After_SPI_Transfer (void)
+{
+
+    spi_rx_buf_tail = (spi_rx_buf_tail+1)%SPI_BUF_SIZE;
+    spi_rx_buf_n +=1;
+}
+
+
+void TIM4_IRQHandler(void) {
+
+    // One full ADC/DAC transaction takes two SPI transfer.
+    // We only process the data after a complete transaction.
+    // We count the number of transfers and only execute when
+    // the number is even, right after a complete transfer.
+    //spi_rx_tansfer_count++;
+    //if(spi_rx_tansfer_count & 0x01){
+    //    return;
+    //}
+    //TIM_ClearITPendingBit(TIM4, TIM_IT_CC3);
+    // Avoid function call, clear interrupt flag directly.
+    TIM4->INTFR = (uint16_t)~TIM_IT_CC3;
+    Update_Index_After_SPI_Transfer();
+}
 
 
 

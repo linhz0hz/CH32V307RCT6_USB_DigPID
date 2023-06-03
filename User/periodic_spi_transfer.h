@@ -11,13 +11,17 @@
 #include "ch32v30x.h"
 
 
-#define SPI_BUF_SIZE 128
+#define SPI_BUF_SIZE 256
 
 /* Global Variable */
-extern uint16_t TxData1[SPI_BUF_SIZE];
-extern uint16_t TxData2[SPI_BUF_SIZE];
+extern uint16_t TxData1[2];
+extern uint16_t TxData2[2];
 extern int16_t RxData1[SPI_BUF_SIZE];
 extern int16_t RxData2[SPI_BUF_SIZE];
+
+extern size_t spi_rx_buf_head = 0;
+extern size_t spi_rx_buf_tail = 0;
+extern size_t spi_rx_buf_n = 0;
 
 //extern int16_t RxData[SPI_BUF_SIZE][2];
 //extern int16_t RxData[SPI_BUF_SIZE];
@@ -25,5 +29,7 @@ extern int16_t RxData2[SPI_BUF_SIZE];
 //extern int16_t RxData;
 
 void Setup_Periodic_Update(uint16_t period);
+
+void TIM4_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 #endif /* USER_PERIODIC_SPI_TRANSFER_H_ */
