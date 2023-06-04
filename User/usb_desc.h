@@ -78,10 +78,13 @@ extern const uint8_t MyCfgDescr_HS[ ];
 extern const uint8_t MyLangDescr[ ];
 extern const uint8_t MyManuInfo[ ];
 extern const uint8_t MyProdInfo[ ];
-extern const uint8_t MySerNumInfo[ ];
+extern uint8_t MySerNumInfo[ ];
 extern const uint8_t MyQuaDesc[ ];
 extern const uint8_t MyBOSDesc[ ];
 extern uint8_t TAB_USB_FS_OSC_DESC[ ];
 extern uint8_t TAB_USB_HS_OSC_DESC[ ];
+
+/* Utility Functions */
+void generate_USB_Serial_Number(void);
 
 #endif /* USER_USB_DESC_H_ */

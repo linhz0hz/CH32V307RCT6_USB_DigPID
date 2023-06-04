@@ -677,7 +677,7 @@ void Setup_Periodic_Update(uint16_t period)
     //NVIC_Init(&NVIC_InitStructure);
     NVIC_EnableIRQ(TIM4_IRQn);
     SetVTFIRQ((uint32_t)TIM4_IRQHandler,TIM4_IRQn,0,ENABLE);
-    
+    //This is the vector table free interrupt. Supposed to be faster.
     //Start the transfer
     Setup_Periodic_Trigger(period);
 }
@@ -705,6 +705,8 @@ void TIM4_IRQHandler(void) {
     // Avoid function call, clear interrupt flag directly.
     TIM4->INTFR = (uint16_t)~TIM_IT_CC3;
     Update_Index_After_SPI_Transfer();
+    // Data transfer was completed in DMA already. This is only to update the index.
+
 }
 
 
