@@ -19,9 +19,9 @@ extern uint16_t TxData2[2];
 extern int16_t RxData1[SPI_BUF_SIZE];
 extern int16_t RxData2[SPI_BUF_SIZE];
 
-extern size_t spi_rx_buf_head = 0;
-extern size_t spi_rx_buf_tail = 0;
-extern size_t spi_rx_buf_n = 0;
+extern size_t spi_rx_buf_head;
+extern size_t spi_rx_buf_tail;
+extern size_t spi_rx_buf_n;
 
 //extern int16_t RxData[SPI_BUF_SIZE][2];
 //extern int16_t RxData[SPI_BUF_SIZE];

@@ -21,7 +21,7 @@
 /* usb device info define  */
 #define DEF_USB_VID                  0x1A86
 #define DEF_USB_PID                  0x5537
-/* USB device descriptor, device serial number£¨bcdDevice£© */
+/* USB device descriptor, device serial numberï¿½ï¿½bcdDeviceï¿½ï¿½ */
 #define DEF_IC_PRG_VER               DEF_FILE_VERSION
 
 /******************************************************************************/

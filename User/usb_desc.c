@@ -19,12 +19,12 @@ const uint8_t  MyDevDescr[ ] =
     0x12,       // bLength
     0x01,       // bDescriptorType (Device)
     0x00, 0x02, // bcdUSB 2.00
-    0xFF,       // bDeviceClass
-    0xFF,       // bDeviceSubClass
-    0xFF,       // bDeviceProtocol
+    0xFF,       // bDeviceClass (Vendor Specific)
+    0xFF,       // bDeviceSubClass (Free to choose)
+    0xFF,       // bDeviceProtocol (Free to choose)
     DEF_USBD_UEP0_SIZE,   // bMaxPacketSize0 64
-    (uint8_t)DEF_USB_VID, (uint8_t)(DEF_USB_VID >> 8),  // idVendor 0x1A86
-    (uint8_t)DEF_USB_PID, (uint8_t)(DEF_USB_PID >> 8),  // idProduct 0x5537
+    (uint8_t)DEF_USB_VID, (uint8_t)(DEF_USB_VID >> 8),  // idVendor 0x1A86 (Assigned by USB Org)
+    (uint8_t)DEF_USB_PID, (uint8_t)(DEF_USB_PID >> 8),  // idProduct 0x5537 (Assigned by Manufacturer)
     DEF_IC_PRG_VER, 0x00, // bcdDevice 0.01
     0x01,       // iManufacturer (String Index)
     0x02,       // iProduct (String Index)
@@ -169,23 +169,61 @@ const uint8_t  MyLangDescr[] =
 };
 
 /* Manufacturer Descriptor */
-const uint8_t  MyManuInfo[] =
-{
-    0x0E, 0x03, 'w', 0, 'c', 0, 'h', 0, '.', 0, 'c', 0, 'n', 0
+const uint8_t  MyManuInfo[] = {
+        /* linhz@BEC5 */
+        22,      /*!< bLength 10*2+2=22 */
+        0x03,      /*!< bDescriptorType */
+        'l', 0x00,
+        'i', 0x00,
+        'n', 0x00,
+        'h', 0x00,
+        'z', 0x00,
+        '@', 0x00,
+        'B', 0x00,
+        'E', 0x00,
+        'C', 0x00,
+        '5', 0x00
 };
-
 /* Product Information */
 const uint8_t  MyProdInfo[] =
 {
-    0x12, 0x03, 'C', 0, 'H', 0, '3', 0, '2', 0, 'V', 0, '3', 0
-              , '0', 0, 'x', 0
+        /* ADC_MONITOR_A00 */
+        32,     /*!< bLength 2*15+2=32 */
+        0x03,     /*!< bDescriptorType */
+        'A', 0x00,
+        'D', 0x00,
+        'C', 0x00,
+        '_', 0x00,
+        'M', 0x00,
+        'O', 0x00,
+        'N', 0x00,
+        'I', 0x00,
+        'T', 0x00,
+        'O', 0x00,
+        'R', 0x00,
+        '_', 0x00,
+        'A', 0x00,
+        '0', 0x00,
+        '0', 0x00,
 };
 
 /* Serial Number Information */
 const uint8_t  MySerNumInfo[] =
 {
-    0x16, 0x03, '0', 0, '1', 0, '2', 0, '3', 0, '4', 0, '5', 0
-              , '6', 0, '7', 0, '8', 0, '9', 0
+    /* 0123456789 */
+        22,     /*!< bLength 2*10+2=22 */
+        0x03,     /*!< bDescriptorType */
+        '0', 0x00,
+        '1', 0x00,
+        '2', 0x00,
+        '3', 0x00,
+        '4', 0x00,
+        '5', 0x00,
+        '6', 0x00,
+        '7', 0x00,
+        '8', 0x00,
+        '9', 0x00,
+        '0', 0x00,
 };
 
 /* Device Qualified Descriptor */

@@ -18,7 +18,7 @@
 
 #include "debug.h"
 #include "periodic_spi_transfer.h"
-#include "PID_controller_core.h"
+//#include "PID_controller_core.h"
 //#include "ch32v30x_gpio.h"
 /* Global typedef */
 
@@ -66,10 +66,10 @@ int main(void)
 	printf("SystemClk:%d\r\n",SystemCoreClock);
 
 	printf("This is printf example\r\n");
-	Setup_PID_Computation_Indicator();
-	Initialize_PID_Core();
+	//Setup_PID_Computation_Indicator();
+	//Initialize_PID_Core();
 	Setup_Periodic_Update(24);
-	Start_Sweep();
+	//Start_Sweep();
 	while(1) {
 	    //PID_Update_Callback_Benchmark();
 		//Delay_Ms(10);

@@ -14,7 +14,6 @@
 
 
 #include "preprog_waveform.h"
-#include "PID_controller_core.h"
 #include <stdint.h>
 /* Global define */
 //#define SPI_BUF_SIZE 128

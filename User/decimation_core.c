@@ -39,6 +39,12 @@ int32_t decimation_sum1;
 int32_t decimation_sum2;
 
 
+size_t time_epoch_ms; // Epoch time in us. 
+//It is updated by the host computer, and updated by systick timer.
+// Note that the MCU clock might be slightly off from host computer clock
+// but the amount is very tiny. Maybe it is a good idea to record both on
+// the host computer.
+
 /*********************************************************************
  * @fn      Initialze_Decimation
  *
